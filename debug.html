@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Card Advisor (Final Version)</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f0c29">
+    <!-- Standard Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png?v=3">
+    <link rel="icon" type="image/x-icon" href="favicon.ico?v=3">
+    <link rel="shortcut icon" href="favicon.ico?v=3">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- marked.js for AI response rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Anime.js for animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+
+<body class="text-white min-h-screen flex flex-col items-center justify-center py-8 px-4">
+    <div class="max-w-6xl w-full glass-container shadow-2xl rounded-2xl p-6 md:p-10 space-y-8">
+
+        <header class="flex flex-col md:flex-row justify-between items-center w-full">
+            <div class="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+                <img src="assets/icons/icon-192x192.png" alt="Credit Card Advisor Logo"
+                    class="w-20 h-20 rounded-2xl shadow-lg border border-white/10">
+                <div>
+                    <h1 class="text-4xl md:text-5xl font-extrabold text-shadow" id="main-header">Credit Card Advisor
+                    </h1>
+                    <p class="text-lg text-indigo-200 mt-2 text-shadow">Comparative AI Analysis for the Smartest Choice
+                    </p>
+                </div>
+                <div class="flex items-center space-x-4 mt-4 md:mt-0">
+                    <div id="currency-display"
+                        class="bg-white/10 text-white font-semibold py-2 px-4 rounded-lg text-sm hidden"></div>
+                    <button id="browse-cards-btn"
+                        class="bg-white/20 text-white font-semibold py-2 px-4 rounded-lg hover:bg-white/30 transition">
+                        Browse All Cards
+                    </button>
+                </div>
+        </header>
+
+        <section class="glass-container p-6 rounded-xl">
+            <h2 class="text-2xl font-bold text-shadow mb-6">1. Your Financial Profile</h2>
+            <!-- API key input removed: key is now provided internally and not shown in UI -->
+            <form id="recommendation-form" class="space-y-6 mt-6">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="income" class="block text-md font-medium mb-2">Annual Income (₹)</label>
+                        <input type="number" id="income" value="1200000" step="50000"
+                            class="w-full p-2 border border-white/20 bg-white/10 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="e.g., 1200000">
+                    </div>
+                    <div>
+                        <label for="credit-score" class="block text-md font-medium mb-2">Credit Score (CIBIL)</label>
+                        <input type="number" id="credit-score" value="780" min="300" max="900"
+                            class="w-full p-2 border border-white/20 bg-white/10 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="e.g., 780">
+                        <label class="flex items-center mt-2">
+                            <input type="checkbox" id="no-credit-history"
+                                class="form-checkbox h-4 w-4 text-indigo-400 rounded bg-white/20 border-white/30">
+                            <span class="ml-2 text-sm">I'm new to credit / No CIBIL Score</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- NEW TIER SELECTION SECTION -->
+                <div>
+                    <h3 class="text-xl font-bold mt-6 mb-3 text-shadow">Preferred Card Tier (Optional)</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <label
+                            class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                            <input type="checkbox" name="preferredTiers" value="Entry-Level"
+                                class="form-checkbox h-5 w-5 text-gray-400 rounded bg-white/20 border-white/30">
+                            <span class="ml-2 font-medium">Entry-Level</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                            <input type="checkbox" name="preferredTiers" value="Standard"
+                                class="form-checkbox h-5 w-5 text-sky-400 rounded bg-white/20 border-white/30">
+                            <span class="ml-2 font-medium">Standard</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                            <input type="checkbox" name="preferredTiers" value="Premium"
+                                class="form-checkbox h-5 w-5 text-indigo-400 rounded bg-white/20 border-white/30">
+                            <span class="ml-2 font-medium">Premium</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                            <input type="checkbox" name="preferredTiers" value="Super-Premium"
+                                class="form-checkbox h-5 w-5 text-purple-400 rounded bg-white/20 border-white/30">
+                            <span class="ml-2 font-medium">Super-Premium</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-bold mt-6 mb-4 text-shadow">2. Your Estimated Monthly Spending (₹)</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="groceries" class="block text-sm font-medium mb-1">🛒 Groceries</label>
+                            <input type="number" id="groceries" value="15000"
+                                class="w-full p-2 border border-white/20 bg-white/10 rounded-md">
+                        </div>
+                        <div>
+                            <label for="online_shopping" class="block text-sm font-medium mb-1">🛍️ Online
+                                Shopping</label>
+                            <input type="number" id="online_shopping" value="20000"
+                                class="w-full p-2 border border-white/20 bg-white/10 rounded-md">
+                        </div>
+                        <div>
+                            <label for="travel" class="block text-sm font-medium mb-1">✈️ Travel</label>
+                            <input type="number" id="travel" value="10000"
+                                class="w-full p-2 border border-white/20 bg-white/10 rounded-md">
+                        </div>
+                        <div>
+                            <label for="dining" class="block text-sm font-medium mb-1">🍽️ Dining</label>
+                            <input type="number" id="dining" value="8000"
+                                class="w-full p-2 border border-white/20 bg-white/10 rounded-md">
+                        </div>
+                        <div>
+                            <label for="utilities" class="block text-sm font-medium mb-1">💡 Utilities</label>
+                            <input type="number" id="utilities" value="5000"
+                                class="w-full p-2 border border-white/20 bg-white/10 rounded-md">
+                        </div>
+                        <div>
+                            <label for="fuel" class="block text-sm font-medium mb-1">⛽ Fuel</label>
+                            <input type="number" id="fuel" value="4000"
+                                class="w-full p-2 border border-white/20 bg-white/10 rounded-md">
+                        </div>
+                        <div>
+                            <label for="other" class="block text-sm font-medium mb-1">🌟 Other</label>
+                            <input type="number" id="other" value="10000"
+                                class="w-full p-2 border border-white/20 bg-white/10 rounded-md">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-bold mt-6 mb-3 text-shadow">3. What do you value most?</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <label
+                            class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                            <input type="checkbox" name="preferences" value="Travel"
+                                class="form-checkbox h-5 w-5 text-indigo-400 rounded bg-white/20 border-white/30">
+                            <span class="ml-2 font-medium">Travel & Miles</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                            <input type="checkbox" name="preferences" value="Cashback"
+                                class="form-checkbox h-5 w-5 text-indigo-400 rounded bg-white/20 border-white/30">
+                            <span class="ml-2 font-medium">Shopping & Cashback</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                            <input type="checkbox" name="preferences" value="Dining"
+                                class="form-checkbox h-5 w-5 text-indigo-400 rounded bg-white/20 border-white/30">
+                            <span class="ml-2 font-medium">Dining Perks</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                            <input type="checkbox" name="preferences" value="LoungeAccess"
+                                class="form-checkbox h-5 w-5 text-indigo-400 rounded bg-white/20 border-white/30">
+                            <span class="ml-2 font-medium">Lounge Access</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                            <input type="checkbox" name="preferences" value="Fuel"
+                                class="form-checkbox h-5 w-5 text-indigo-400 rounded bg-white/20 border-white/30">
+                            <span class="ml-2 font-medium">Fuel Savings</span>
+                        </label>
+                        <label
+                            class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                            <input type="checkbox" name="preferences" value="Low_Fee"
+                                class="form-checkbox h-5 w-5 text-indigo-400 rounded bg-white/20 border-white/30">
+                            <span class="ml-2 font-medium">Low/No Annual Fee</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit"
+                    class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:from-purple-700 hover:to-indigo-700 transition duration-300 ease-in-out transform hover:-translate-y-1 text-lg">
+                    Find My Best Cards
+                </button>
+            </form>
+            <div id="loading-indicator" class="text-center mt-4 hidden flex items-center justify-center gap-3">
+                <!-- New Anime.js Loading Animation -->
+                <div id="loading-animation" style="width: 100px; height: 60px;">
+                    <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+                        <rect id="card-base" x="0" y="0" width="100" height="60" rx="5" fill="#a5b4fc" />
+                        <rect id="card-chip" x="10" y="25" width="15" height="10" rx="2" fill="#facc15" />
+                        <rect id="card-line" x="0" y="10" width="100" height="8" fill="#818cf8" />
+                    </svg>
+                </div>
+                <p>Recommending credit cards...</p>
+            </div>
+            <div id="error-message" class="text-red-400 text-center mt-4 font-medium hidden"></div>
+        </section>
+
+        <section id="results-section" class="hidden pt-8 space-y-12">
+            <div id="main-recommendations">
+                <h2 class="text-3xl font-extrabold text-shadow mb-6 text-center">Your Personalized Recommendations</h2>
+                <div id="results-container" class="grid md:grid-cols-2 gap-8"></div>
+            </div>
+
+            <!-- New Holistic AI Explanation Section -->
+            <div id="holistic-ai-container" class="glass-container p-6 rounded-xl">
+                <h2 class="text-3xl font-extrabold text-shadow mb-4 text-center">Comparative AI Analysis</h2>
+                <div id="holistic-ai-explanation" class="ai-explanation">
+                    <div class="flex items-center justify-center h-full">
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Card
+                            Name
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            Customer
+                            Score</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Bank
+                            Score
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Nash
+                            Product</th>
+                        </tr>
+                        </thead>
+                        <tbody id="payoff-table-body" class="divide-y divide-white/20"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <button onclick="resetApp()"
+                    class="mt-10 mx-auto block bg-white/20 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-white/30 transition duration-300">
+                    Start New Recommendation
+                </button>
+        </section>
+    </div>
+
+    <!-- Sidebar and Modal for Card Explorer -->
+    <div id="sidebar"
+        class="fixed top-0 right-0 h-full w-full md:w-1/3 glass-container shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col">
+        <div class="p-4 border-b border-white/20 flex justify-between items-center">
+            <h2 class="text-2xl font-bold text-shadow">Card Database Explorer</h2>
+            <button id="close-sidebar-btn" class="hover:text-white/80">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="p-4 border-b border-white/20">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="tier-filter" class="block text-sm font-medium">Filter by Tier</label>
+                    <select id="tier-filter"
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white/10 border-white/20 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <option>All Tiers</option>
+                        <option>Entry-Level</option>
+                        <option>Standard</option>
+                        <option>Premium</option>
+                        <option>Super-Premium</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="issuer-filter" class="block text-sm font-medium">Filter by Issuer</label>
+                    <select id="issuer-filter"
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white/10 border-white/20 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <option>All Issuers</option>
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <div>
+                    <label for="country-filter" class="block text-sm font-medium">Filter by Country</label>
+                    <select id="country-filter"
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white/10 border-white/20 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                        <option>All Countries</option>
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div id="sidebar-card-list" class="flex-grow overflow-y-auto p-4 space-y-3">
+            <!-- Card list will be populated by JS -->
+        </div>
+    </div>
+
+    <div id="card-modal"
+        class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 items-center justify-center p-4 overflow-y-auto">
+        <div class="relative w-full max-w-md mx-auto my-8">
+            <button id="close-modal-btn"
+                class="absolute -top-10 right-0 text-white hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded-full p-1 transition-colors z-10"
+                aria-label="Close">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+            <div id="modal-content" class="relative">
+                <!-- Content injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Scripts -->
+    <script src="assets/js/data.js"></script>
+    <script src="assets/js/app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    }, err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+
+</html>
