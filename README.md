@@ -13,7 +13,7 @@ An AI-powered credit card recommendation system that helps users find the best c
 
 ## 🚀 Live Demo
 
-Visit the live application: [Credit Card Advisor](https://[your-username].github.io/interstellar-coronal/)
+Visit the live application: [Credit Card Advisor](https://vortexquasarx.github.io/credit-card-advisor/)
 
 ## 🛠️ Technologies Used
 
