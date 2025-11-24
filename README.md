@@ -27,7 +27,7 @@ Visit the live application: [Credit Card Advisor](https://vortexquasarx.github.i
 ## 📁 Project Structure
 
 ```
-interstellar-coronal/
+Main/
 ├── index.html              # Main application file
 ├── assets/
 │   ├── js/
