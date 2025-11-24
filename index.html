@@ -5,16 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Credit Card Advisor (Final Version)</title>
-
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f0c29">
-    <!-- Standard Favicon -->
-    <link rel="icon" type="image/png" href="favicon.png?v=3">
-    <link rel="icon" type="image/x-icon" href="favicon.ico?v=3">
-    <link rel="shortcut icon" href="favicon.ico?v=3">
-    <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js for data visualization -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -22,9 +12,136 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Anime.js for animations -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&display=swap');
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="assets/css/style.css">
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f0c29;
+            background: linear-gradient(to right, #24243e, #302b63, #0f0c29);
+        }
+
+        .glass-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .text-shadow {
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .recommended-badge {
+            background-image: linear-gradient(to right, #8e2de2, #4a00e0);
+            box-shadow: 0 4px 15px 0 rgba(74, 0, 224, 0.4);
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .animate-spin-slow {
+            animation: spin 1.5s linear infinite;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-button {
+            -webkit-appearance: none;
+            appearance: none;
+            margin: 0;
+        }
+
+        .ai-explanation h4 {
+            font-weight: 700;
+            color: #c7d2fe;
+            margin-bottom: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .ai-explanation p {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        .ai-explanation ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .ai-explanation strong {
+            color: #e0e7ff;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 800px;
+            /* Increased height for more cards */
+        }
+
+        /* For card animations */
+        .card-container {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        input:disabled {
+            background-color: rgba(229, 231, 235, 0.5);
+            cursor: not-allowed;
+        }
+
+        .credit-card-font {
+            font-family: 'Source Code Pro', monospace;
+        }
+
+        /* Custom styles for select dropdown */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1.5em 1.5em;
+            color: white;
+        }
+
+        select option {
+            background-color: #302b63;
+        }
+
+        /* Flippable card styles */
+        .flip-card-scene {
+            perspective: 1000px;
+        }
+
+        .flip-card {
+            transform-style: preserve-3d;
+            transition: transform 0.8s;
+        }
+
+        .flip-card-face {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+
+        .flip-card-back {
+            transform: rotateY(180deg);
+        }
+    </style>
 </head>
 
 <body class="text-white min-h-screen flex flex-col items-center justify-center py-8 px-4">
@@ -40,14 +157,15 @@
                     <p class="text-lg text-indigo-200 mt-2 text-shadow">Comparative AI Analysis for the Smartest Choice
                     </p>
                 </div>
-                <div class="flex items-center space-x-4 mt-4 md:mt-0">
-                    <div id="currency-display"
-                        class="bg-white/10 text-white font-semibold py-2 px-4 rounded-lg text-sm hidden"></div>
-                    <button id="browse-cards-btn"
-                        class="bg-white/20 text-white font-semibold py-2 px-4 rounded-lg hover:bg-white/30 transition">
-                        Browse All Cards
-                    </button>
-                </div>
+            </div>
+            <div class="flex items-center space-x-4 mt-4 md:mt-0">
+                <div id="currency-display"
+                    class="bg-white/10 text-white font-semibold py-2 px-4 rounded-lg text-sm hidden"></div>
+                <button id="browse-cards-btn"
+                    class="bg-white/20 text-white font-semibold py-2 px-4 rounded-lg hover:bg-white/30 transition">
+                    Browse All Cards
+                </button>
+            </div>
         </header>
 
         <section class="glass-container p-6 rounded-xl">
@@ -219,28 +337,49 @@
                 <h2 class="text-3xl font-extrabold text-shadow mb-4 text-center">Comparative AI Analysis</h2>
                 <div id="holistic-ai-explanation" class="ai-explanation">
                     <div class="flex items-center justify-center h-full">
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Card
-                            Name
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                            Customer
-                            Score</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Bank
-                            Score
-                        </th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Nash
-                            Product</th>
-                        </tr>
-                        </thead>
-                        <tbody id="payoff-table-body" class="divide-y divide-white/20"></tbody>
-                        </table>
+                        <div class="text-center">
+                            <div
+                                class="w-6 h-6 border-4 border-white/50 border-t-transparent rounded-full animate-spin-slow mx-auto">
+                            </div>
+                            <p class="text-sm mt-2">Generating your personalized strategy...</p>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <button onclick="resetApp()"
-                    class="mt-10 mx-auto block bg-white/20 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-white/30 transition duration-300">
-                    Start New Recommendation
-                </button>
+            <div class="glass-container p-6 rounded-xl">
+                <h2 class="text-3xl font-extrabold text-shadow mb-2 text-center">Game Theory Dynamics</h2>
+                <p class="text-center text-indigo-200 mb-6">Visualizing the balance between your value (Customer Score)
+                    and bank profitability.</p>
+                <div class="chart-container"><canvas id="payoffChart"></canvas></div>
+                <h3 class="text-xl font-bold text-shadow mt-10 mb-4">Detailed Payoff Matrix</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr>
+                                <th scope="col"
+                                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Card Name
+                                </th>
+                                <th scope="col"
+                                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Customer
+                                    Score</th>
+                                <th scope="col"
+                                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Bank Score
+                                </th>
+                                <th scope="col"
+                                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Nash
+                                    Product</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payoff-table-body" class="divide-y divide-white/20"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <button onclick="resetApp()"
+                class="mt-10 mx-auto block bg-white/20 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-white/30 transition duration-300">
+                Start New Recommendation
+            </button>
         </section>
     </div>
 
@@ -295,7 +434,7 @@
 
     <div id="card-modal"
         class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 items-center justify-center p-4 overflow-y-auto">
-        <div class="relative w-full max-w-md mx-auto my-8">
+        <div class="relative w-full mx-auto my-8">
             <button id="close-modal-btn"
                 class="absolute -top-10 right-0 text-white hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded-full p-1 transition-colors z-10"
                 aria-label="Close">
@@ -306,28 +445,265 @@
                 </svg>
             </button>
             <div id="modal-content" class="relative">
-                <!-- Content injected by JS -->
-            </div>
-        </div>
-    </div>
+                <!-- Front of card -->
+                <div id="card-front" class="transition-all duration-300">
+                    <!-- Front content will be inserted here -->
+                </div>
 
-    <!-- Application Scripts -->
-    <script src="assets/js/data.js"></script>
-    <script src="assets/js/app.js"></script>
+                <!-- Back of card (initially hidden) -->
+                <div id="card-back"
+                    class="hidden absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6">
+                    <button id="back-to-front" class="text-white/70 hover:text-white mb-4">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                            </path>
+                        </svg>
+                    </button>
+                    <div class="h-8 bg-black/30 mb-6"></div>
+                    <div class="bg-black/20 p-3 rounded flex justify-end items-center mb-4">
+                        <span id="cvv-display" class="bg-white text-black px-3 py-1 rounded text-sm font-mono"></span>
+                    </div>
+                    <div class="text-xs text-gray-400 text-center mb-4">AUTHORIZED SIGNATURE</div>
+                    <div class="h-8 bg-black/20 w-3/4 mx-auto mb-6"></div>
 
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    }, err => {
-                        console.log('ServiceWorker registration failed: ', err);
-                    });
-            });
-        }
-    </script>
+                    <!-- AI Analysis Section -->
+                    <div id="ai-analysis" class="mt-4 pt-4 border-t border-white/10">
+                        <h4 class="font-bold text-sm mb-2 flex items-center text-indigo-300">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            AI-Powered Analysis
+                        </h4>
+                        <div id="ai-analysis-content" class="text-sm text-gray-200 mt-2">
+                            <div class="animate-pulse flex space-x-2">
+                                <div class="w-2 h-2 bg-indigo-400 rounded-full"></div>
+                                <div class="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                                <span class="ml-2 font-medium">Dining Perks</span>
+                                </label>
+                                <label
+                                    class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                                    <input type="checkbox" name="preferences" value="LoungeAccess"
+                                        class="form-checkbox h-5 w-5 text-indigo-400 rounded bg-white/20 border-white/30">
+                                    <span class="ml-2 font-medium">Lounge Access</span>
+                                </label>
+                                <label
+                                    class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                                    <input type="checkbox" name="preferences" value="Fuel"
+                                        class="form-checkbox h-5 w-5 text-indigo-400 rounded bg-white/20 border-white/30">
+                                    <span class="ml-2 font-medium">Fuel Savings</span>
+                                </label>
+                                <label
+                                    class="flex items-center p-3 border border-white/20 bg-white/10 rounded-md shadow-sm cursor-pointer hover:bg-white/20 transition">
+                                    <input type="checkbox" name="preferences" value="Low_Fee"
+                                        class="form-checkbox h-5 w-5 text-indigo-400 rounded bg-white/20 border-white/30">
+                                    <span class="ml-2 font-medium">Low/No Annual Fee</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit"
+                            class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:from-purple-700 hover:to-indigo-700 transition duration-300 ease-in-out transform hover:-translate-y-1 text-lg">
+                            Find My Best Cards
+                        </button>
+                        </form>
+                        <div id="loading-indicator"
+                            class="text-center mt-4 hidden flex items-center justify-center gap-3">
+                            <!-- New Anime.js Loading Animation -->
+                            <div id="loading-animation" style="width: 100px; height: 60px;">
+                                <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+                                    <rect id="card-base" x="0" y="0" width="100" height="60" rx="5" fill="#a5b4fc" />
+                                    <rect id="card-chip" x="10" y="25" width="15" height="10" rx="2" fill="#facc15" />
+                                    <rect id="card-line" x="0" y="10" width="100" height="8" fill="#818cf8" />
+                                </svg>
+                            </div>
+                            <p>Recommending credit cards...</p>
+                        </div>
+                        <div id="error-message" class="text-red-400 text-center mt-4 font-medium hidden"></div>
+                        </section>
+
+                        <section id="results-section" class="hidden pt-8 space-y-12">
+                            <div id="main-recommendations">
+                                <h2 class="text-3xl font-extrabold text-shadow mb-6 text-center">Your Personalized
+                                    Recommendations</h2>
+                                <div id="results-container" class="grid md:grid-cols-2 gap-8"></div>
+                            </div>
+
+                            <!-- New Holistic AI Explanation Section -->
+                            <div id="holistic-ai-container" class="glass-container p-6 rounded-xl">
+                                <h2 class="text-3xl font-extrabold text-shadow mb-4 text-center">Comparative AI Analysis
+                                </h2>
+                                <div id="holistic-ai-explanation" class="ai-explanation">
+                                    <div class="flex items-center justify-center h-full">
+                                        <div class="text-center">
+                                            <div
+                                                class="w-6 h-6 border-4 border-white/50 border-t-transparent rounded-full animate-spin-slow mx-auto">
+                                            </div>
+                                            <p class="text-sm mt-2">Generating your personalized strategy...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="glass-container p-6 rounded-xl">
+                                <h2 class="text-3xl font-extrabold text-shadow mb-2 text-center">Game Theory Dynamics
+                                </h2>
+                                <p class="text-center text-indigo-200 mb-6">Visualizing the balance between your value
+                                    (Customer Score)
+                                    and bank profitability.</p>
+                                <div class="chart-container"><canvas id="payoffChart"></canvas></div>
+                                <h3 class="text-xl font-bold text-shadow mt-10 mb-4">Detailed Payoff Matrix</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col"
+                                                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                                                    Card Name
+                                                </th>
+                                                <th scope="col"
+                                                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                                                    Customer
+                                                    Score</th>
+                                                <th scope="col"
+                                                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                                                    Bank Score
+                                                </th>
+                                                <th scope="col"
+                                                    class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                                                    Nash
+                                                    Product</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="payoff-table-body" class="divide-y divide-white/20"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <button onclick="resetApp()"
+                                class="mt-10 mx-auto block bg-white/20 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-white/30 transition duration-300">
+                                Start New Recommendation
+                            </button>
+                        </section>
+                    </div>
+
+                    <!-- Sidebar and Modal for Card Explorer -->
+                    <div id="sidebar"
+                        class="fixed top-0 right-0 h-full w-full md:w-1/3 glass-container shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out z-50 flex flex-col">
+                        <div class="p-4 border-b border-white/20 flex justify-between items-center">
+                            <h2 class="text-2xl font-bold text-shadow">Card Database Explorer</h2>
+                            <button id="close-sidebar-btn" class="hover:text-white/80">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="p-4 border-b border-white/20">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="tier-filter" class="block text-sm font-medium">Filter by Tier</label>
+                                    <select id="tier-filter"
+                                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white/10 border-white/20 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                        <option>All Tiers</option>
+                                        <option>Entry-Level</option>
+                                        <option>Standard</option>
+                                        <option>Premium</option>
+                                        <option>Super-Premium</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="issuer-filter" class="block text-sm font-medium">Filter by
+                                        Issuer</label>
+                                    <select id="issuer-filter"
+                                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white/10 border-white/20 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                        <option>All Issuers</option>
+                                        <!-- Options will be populated by JS -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="country-filter" class="block text-sm font-medium">Filter by
+                                        Country</label>
+                                    <select id="country-filter"
+                                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base bg-white/10 border-white/20 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                        <option>All Countries</option>
+                                        <!-- Options will be populated by JS -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="sidebar-card-list" class="flex-grow overflow-y-auto p-4 space-y-3">
+                            <!-- Card list will be populated by JS -->
+                        </div>
+                    </div>
+
+                    <div id="card-modal"
+                        class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 items-center justify-center p-4 overflow-y-auto">
+                        <div class="relative w-full max-w-md mx-auto my-8">
+                            <button id="close-modal-btn"
+                                class="absolute -top-10 right-0 text-white hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 rounded-full p-1 transition-colors z-10"
+                                aria-label="Close">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12">
+                                    </path>
+                                </svg>
+                            </button>
+                            <div id="modal-content" class="relative">
+                                <!-- Front of card -->
+                                <div id="card-front" class="transition-all duration-300">
+                                    <!-- Front content will be inserted here -->
+                                </div>
+
+                                <!-- Back of card (initially hidden) -->
+                                <div id="card-back"
+                                    class="hidden absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-6">
+                                    <button id="back-to-front" class="text-white/70 hover:text-white mb-4">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 19l-7-7 7-7">
+                                            </path>
+                                        </svg>
+                                    </button>
+                                    <div class="h-8 bg-black/30 mb-6"></div>
+                                    <div class="bg-black/20 p-3 rounded flex justify-end items-center mb-4">
+                                        <span id="cvv-display"
+                                            class="bg-white text-black px-3 py-1 rounded text-sm font-mono"></span>
+                                    </div>
+                                    <div class="text-xs text-gray-400 text-center mb-4">AUTHORIZED SIGNATURE</div>
+                                    <div class="h-8 bg-black/20 w-3/4 mx-auto mb-6"></div>
+
+                                    <!-- AI Analysis Section -->
+                                    <div id="ai-analysis" class="mt-4 pt-4 border-t border-white/10">
+                                        <h4 class="font-bold text-sm mb-2 flex items-center text-indigo-300">
+                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                            </svg>
+                                            AI-Powered Analysis
+                                        </h4>
+                                        <div id="ai-analysis-content" class="text-sm text-gray-200 mt-2">
+                                            <div class="animate-pulse flex space-x-2">
+                                                <div class="w-2 h-2 bg-indigo-400 rounded-full"></div>
+                                                <div class="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                                                <div class="w-2 h-2 bg-indigo-600 rounded-full"></div>
+                                                <span class="ml-2 text-sm text-indigo-300">Analyzing card
+                                                    benefits...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Load card database and application logic -->
+                    <script src="assets/js/data.js"></script>
+                    <script src="assets/js/app.js"></script>
 </body>
 
 </html>

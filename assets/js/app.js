@@ -10,8 +10,11 @@ const CurrencyConverter = {
             const data = await response.json();
             currencyRates = data.rates;
             console.log("Currency rates fetched:", currencyRates);
-            document.getElementById('currency-display').textContent = `1 USD = ₹${(1 / data.rates.USD).toFixed(2)}`;
-            document.getElementById('currency-display').classList.remove('hidden');
+            const display = document.getElementById('currency-display');
+            if (display) {
+                display.textContent = `1 USD = ₹${(1 / data.rates.USD).toFixed(2)}`;
+                display.classList.remove('hidden');
+            }
             return currencyRates;
         } catch (error) {
             console.error("Currency API Error:", error);
@@ -177,118 +180,173 @@ const RecommendationEngine = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    anime({ targets: '#main-header', translateY: [-20, 0], opacity: [0, 1], duration: 800, easing: 'easeOutExpo' });
+    // Safe anime.js usage
+    if (typeof anime !== 'undefined') {
+        anime({ targets: '#main-header', translateY: [-20, 0], opacity: [0, 1], duration: 800, easing: 'easeOutExpo' });
+    }
+
     CurrencyConverter.getRates();
 
     const noCreditCheckbox = document.getElementById('no-credit-history');
     const creditScoreInput = document.getElementById('credit-score');
-    noCreditCheckbox.addEventListener('change', () => {
-        if (noCreditCheckbox.checked) {
-            creditScoreInput.value = 300;
-            creditScoreInput.disabled = true;
-        } else {
-            creditScoreInput.disabled = false;
-            creditScoreInput.value = 780;
-        }
-    });
+    if (noCreditCheckbox && creditScoreInput) {
+        noCreditCheckbox.addEventListener('change', () => {
+            if (noCreditCheckbox.checked) {
+                creditScoreInput.value = 300;
+                creditScoreInput.disabled = true;
+            } else {
+                creditScoreInput.disabled = false;
+                creditScoreInput.value = 780;
+            }
+        });
+    }
 
     // Sidebar Logic
     const browseBtn = document.getElementById('browse-cards-btn');
     const closeSidebarBtn = document.getElementById('close-sidebar-btn');
     const sidebar = document.getElementById('sidebar');
 
-    // Initialize sidebar when browse button is clicked
-    browseBtn.addEventListener('click', async () => {
-        console.log('Browse button clicked, initializing sidebar...');
-        try {
-            await initializeSidebar();
-            sidebar.classList.remove('translate-x-full');
-        } catch (error) {
-            console.error('Error initializing sidebar:', error);
-        }
-    });
+    if (browseBtn) {
+        browseBtn.addEventListener('click', async () => {
+            console.log('Browse button clicked, initializing sidebar...');
+            try {
+                await initializeSidebar();
+                if (sidebar) sidebar.classList.remove('translate-x-full');
+            } catch (error) {
+                console.error('Error initializing sidebar:', error);
+            }
+        });
+    }
 
-    closeSidebarBtn.addEventListener('click', () => {
-        sidebar.classList.add('translate-x-full');
-    });
+    if (closeSidebarBtn && sidebar) {
+        closeSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.add('translate-x-full');
+        });
+    }
 
-    document.getElementById('tier-filter').addEventListener('change', updateSidebarFilters);
-    document.getElementById('issuer-filter').addEventListener('change', updateSidebarFilters);
-    document.getElementById('country-filter').addEventListener('change', updateSidebarFilters);
-});
+    const tierFilter = document.getElementById('tier-filter');
+    const issuerFilter = document.getElementById('issuer-filter');
+    const countryFilter = document.getElementById('country-filter');
 
-document.getElementById('recommendation-form').addEventListener('submit', async function (event) {
-    event.preventDefault();
-    const loading = document.getElementById('loading-indicator');
-    loading.classList.remove('hidden');
+    if (tierFilter) tierFilter.addEventListener('change', updateSidebarFilters);
+    if (issuerFilter) issuerFilter.addEventListener('change', updateSidebarFilters);
+    if (countryFilter) countryFilter.addEventListener('change', updateSidebarFilters);
 
-    // Start loading animation
-    anime({
-        targets: '#card-base',
-        translateX: [{ value: -10, duration: 400 }, { value: 10, duration: 400 }, { value: 0, duration: 400 }],
-        rotateY: [{ value: -10, duration: 600 }, { value: 0, duration: 600 }],
-        easing: 'easeInOutSine',
-        loop: true,
-        direction: 'alternate'
-    });
+    // Form Submission Logic
+    const form = document.getElementById('recommendation-form');
+    if (form) {
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            console.log("Form submitted!");
 
-    const errorDiv = document.getElementById('error-message');
-    const resultsSection = document.getElementById('results-section');
-    errorDiv.classList.add('hidden');
-    resultsSection.classList.add('hidden');
-    try {
-        const rates = await CurrencyConverter.getRates();
-        const allCards = await GlobalCardAPI.fetchAllCards();
-        if (allCards.length === 0) return; // Stop if DB failed to load
+            const loading = document.getElementById('loading-indicator');
+            if (loading) loading.classList.remove('hidden');
 
-        const userProfile = {
-            income: parseInt(document.getElementById('income').value) || 0,
-            credit_score: parseInt(document.getElementById('credit-score').value) || 300,
-            spending: { groceries: parseInt(document.getElementById('groceries').value) || 0, online_shopping: parseInt(document.getElementById('online_shopping').value) || 0, travel: parseInt(document.getElementById('travel').value) || 0, dining: parseInt(document.getElementById('dining').value) || 0, utilities: parseInt(document.getElementById('utilities').value) || 0, fuel: parseInt(document.getElementById('fuel').value) || 0, other: parseInt(document.getElementById('other').value) || 0, },
-            preferences: Array.from(document.querySelectorAll('input[name="preferences"]:checked')).map(cb => cb.value),
-            preferredTiers: Array.from(document.querySelectorAll('input[name="preferredTiers"]:checked')).map(cb => cb.value),
-            isNewToCredit: document.getElementById('no-credit-history').checked
-        };
-        const { recommendations, allScoredCards } = RecommendationEngine.runFullAnalysis(userProfile, allCards, rates);
-        if (recommendations.length === 0) {
-            errorDiv.innerText = "😞 We couldn't find any suitable cards for your profile. Please try adjusting your income or credit score.";
-            errorDiv.classList.remove('hidden');
-        } else {
-            await displayRecommendations(recommendations, userProfile);
-            displayGameTheoryVisuals(allScoredCards, recommendations.map(r => r.card.CardName));
-            resultsSection.classList.remove('hidden');
-        }
-    } catch (error) {
-        console.error("Calculation failed:", error);
-        errorDiv.innerText = `⚠️ An unexpected error occurred during calculation. Please check your inputs or network connection.`;
-        errorDiv.classList.remove('hidden');
-    } finally {
-        loading.classList.add('hidden');
-        anime.remove('#card-base'); // Stop animation
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: '#card-base',
+                    translateX: [{ value: -10, duration: 400 }, { value: 10, duration: 400 }, { value: 0, duration: 400 }],
+                    rotateY: [{ value: -10, duration: 600 }, { value: 0, duration: 600 }],
+                    easing: 'easeInOutSine',
+                    loop: true,
+                    direction: 'alternate'
+                });
+            }
+
+            const errorDiv = document.getElementById('error-message');
+            const resultsSection = document.getElementById('results-section');
+            if (errorDiv) errorDiv.classList.add('hidden');
+            if (resultsSection) resultsSection.classList.add('hidden');
+
+            try {
+                const rates = await CurrencyConverter.getRates();
+                const allCards = await GlobalCardAPI.fetchAllCards();
+
+                if (allCards.length === 0) {
+                    console.error("Database failed to load or is empty");
+                    if (errorDiv) {
+                        errorDiv.innerText = "⚠️ Critical Error: Unable to load card database. Please refresh the page.";
+                        errorDiv.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                const userProfile = {
+                    income: parseInt(document.getElementById('income').value) || 0,
+                    credit_score: parseInt(document.getElementById('credit-score').value) || 300,
+                    spending: {
+                        groceries: parseInt(document.getElementById('groceries').value) || 0,
+                        online_shopping: parseInt(document.getElementById('online_shopping').value) || 0,
+                        travel: parseInt(document.getElementById('travel').value) || 0,
+                        dining: parseInt(document.getElementById('dining').value) || 0,
+                        utilities: parseInt(document.getElementById('utilities').value) || 0,
+                        fuel: parseInt(document.getElementById('fuel').value) || 0,
+                        other: parseInt(document.getElementById('other').value) || 0,
+                    },
+                    preferences: Array.from(document.querySelectorAll('input[name="preferences"]:checked')).map(cb => cb.value),
+                    preferredTiers: Array.from(document.querySelectorAll('input[name="preferredTiers"]:checked')).map(cb => cb.value),
+                    isNewToCredit: document.getElementById('no-credit-history').checked
+                };
+
+                const { recommendations, allScoredCards } = RecommendationEngine.runFullAnalysis(userProfile, allCards, rates);
+
+                if (recommendations.length === 0) {
+                    console.log("No recommendations found");
+                    if (errorDiv) {
+                        errorDiv.innerText = "😞 We couldn't find any suitable cards for your profile. Please try adjusting your income or credit score.";
+                        errorDiv.classList.remove('hidden');
+                    }
+                } else {
+                    console.log("Recommendations found:", recommendations.length);
+                    await displayRecommendations(recommendations, userProfile);
+                    console.log("Recommendations displayed");
+                    displayGameTheoryVisuals(allScoredCards, recommendations.map(r => r.card.CardName));
+                    console.log("Game theory visuals displayed");
+                    if (resultsSection) {
+                        resultsSection.classList.remove('hidden');
+                        resultsSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    console.log("Results section unhidden");
+                }
+            } catch (error) {
+                console.error("Calculation failed:", error);
+                if (errorDiv) {
+                    errorDiv.innerText = `⚠️ An unexpected error occurred: ${error.message}`;
+                    errorDiv.classList.remove('hidden');
+                }
+            } finally {
+                if (loading) loading.classList.add('hidden');
+                if (typeof anime !== 'undefined') anime.remove('#card-base');
+            }
+        });
     }
 });
 
 async function displayRecommendations(recommendations, profile) {
     const container = document.getElementById('results-container');
+    if (!container) return;
     container.innerHTML = '';
     recommendations.forEach((rec, index) => { container.innerHTML += createCardHtml(rec, index); });
 
-    anime({ targets: '.card-container', translateY: [20, 0], opacity: [0, 1], delay: anime.stagger(100, { from: 'first' }), easing: 'easeOutExpo' });
+    if (typeof anime !== 'undefined') {
+        anime({ targets: '.card-container', translateY: [20, 0], opacity: [0, 1], delay: anime.stagger(100, { from: 'first' }), easing: 'easeOutExpo' });
+    }
 
     const prompt = createComparativePromptForAI(recommendations, profile);
     const fullExplanation = await AIManager.generateComparativeAnalysis(prompt, profile.isNewToCredit);
 
     const explanationDiv = document.getElementById('holistic-ai-explanation');
-    const parseMarkdown = (md) => {
-        try { return (window.marked?.parse ? window.marked.parse(md) : window.marked ? window.marked(md) : md); } catch { return md; }
-    };
-    explanationDiv.innerHTML = parseMarkdown(fullExplanation);
+    if (explanationDiv) {
+        const parseMarkdown = (md) => {
+            try { return (window.marked?.parse ? window.marked.parse(md) : window.marked ? window.marked(md) : md); } catch { return md; }
+        };
+        explanationDiv.innerHTML = parseMarkdown(fullExplanation);
+    }
 }
 
 function displayGameTheoryVisuals(allScoredCards, recommendedCardNames) {
     const sortedForTable = [...allScoredCards].sort((a, b) => b.scores.nash_product - a.scores.nash_product);
     populatePayoffTable(sortedForTable, recommendedCardNames);
-    // Reverted to show ALL eligible cards in the chart
     updatePayoffChart(sortedForTable, recommendedCardNames);
 }
 
@@ -331,6 +389,7 @@ function createCardHtml(rec, index) {
 
 function populatePayoffTable(allScoredCards, recommendedCardNames) {
     const tableBody = document.getElementById('payoff-table-body');
+    if (!tableBody) return;
     tableBody.innerHTML = '';
     allScoredCards.forEach(rec => {
         const row = tableBody.insertRow();
@@ -347,7 +406,9 @@ function populatePayoffTable(allScoredCards, recommendedCardNames) {
 }
 
 function updatePayoffChart(cardsForChart, recommendedCardNames) {
-    const ctx = document.getElementById('payoffChart').getContext('2d');
+    const canvas = document.getElementById('payoffChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     if (payoffChartInstance) { payoffChartInstance.destroy(); }
     const labels = cardsForChart.map(rec => rec.card.CardName);
     const customerScores = cardsForChart.map(rec => rec.scores.customer_score);
@@ -369,9 +430,12 @@ function updatePayoffChart(cardsForChart, recommendedCardNames) {
 }
 
 function resetApp() {
-    document.getElementById('recommendation-form').reset();
-    document.getElementById('results-section').classList.add('hidden');
-    document.getElementById('error-message').classList.add('hidden');
+    const form = document.getElementById('recommendation-form');
+    if (form) form.reset();
+    const results = document.getElementById('results-section');
+    if (results) results.classList.add('hidden');
+    const error = document.getElementById('error-message');
+    if (error) error.classList.add('hidden');
     if (payoffChartInstance) { payoffChartInstance.destroy(); payoffChartInstance = null; }
     window.scrollTo(0, 0);
 }
@@ -380,13 +444,17 @@ function resetApp() {
 document.addEventListener('mouseover', function (e) {
     if (e.target.closest('.card-container')) {
         const card = e.target.closest('.card-container');
-        anime({ targets: card, scale: 1.03, duration: 300, easing: 'easeOutQuad' });
+        if (typeof anime !== 'undefined') {
+            anime({ targets: card, scale: 1.03, duration: 300, easing: 'easeOutQuad' });
+        }
     }
 });
 document.addEventListener('mouseout', function (e) {
     if (e.target.closest('.card-container')) {
         const card = e.target.closest('.card-container');
-        anime({ targets: card, scale: 1, duration: 300, easing: 'easeOutQuad' });
+        if (typeof anime !== 'undefined') {
+            anime({ targets: card, scale: 1, duration: 300, easing: 'easeOutQuad' });
+        }
     }
 });
 
@@ -400,31 +468,9 @@ async function initializeSidebar() {
         allCardsCache = await GlobalCardAPI.fetchAllCards();
         console.log(`Fetched ${allCardsCache.length} cards`);
 
-        // Debug: Log first few cards
-        console.log('Sample cards:', allCardsCache.slice(0, 3));
-
         // Initialize filters
         console.log('Updating sidebar filters...');
         updateSidebarFilters();
-
-        // Add event listeners for filters
-        console.log('Adding filter event listeners...');
-        const tierFilter = document.getElementById('tier-filter');
-        const issuerFilter = document.getElementById('issuer-filter');
-        const countryFilter = document.getElementById('country-filter');
-
-        if (!tierFilter || !issuerFilter || !countryFilter) {
-            console.error('One or more filter elements not found:', {
-                tierFilter: !!tierFilter,
-                issuerFilter: !!issuerFilter,
-                countryFilter: !!countryFilter
-            });
-        } else {
-            tierFilter.addEventListener('change', updateSidebarFilters);
-            issuerFilter.addEventListener('change', updateSidebarFilters);
-            countryFilter.addEventListener('change', updateSidebarFilters);
-            console.log('Filter event listeners added');
-        }
 
         console.log('Sidebar initialization complete');
     } catch (error) {
@@ -456,55 +502,35 @@ function updateSidebarFilters() {
         const issuer = issuerEl.value;
         const country = countryEl.value;
 
-        console.log('Current filter values:', { tier, issuer, country });
-
         if (!allCardsCache || allCardsCache.length === 0) {
             console.warn('No cards in cache to filter');
             populateCardList([]);
             return;
         }
 
-        let filteredCards = [...allCardsCache]; // Create a copy to avoid modifying the original
+        let filteredCards = [...allCardsCache];
 
         if (tier && tier !== 'All Tiers') {
             filteredCards = filteredCards.filter(card => card.CardTier === tier);
-            console.log(`Filtered by tier '${tier}': ${filteredCards.length} cards remaining`);
         }
         if (issuer && issuer !== 'All Issuers') {
             filteredCards = filteredCards.filter(card => card.Issuer === issuer);
-            console.log(`Filtered by issuer '${issuer}': ${filteredCards.length} cards remaining`);
         }
         if (country && country !== 'All Countries') {
             filteredCards = filteredCards.filter(card => card.Country === country);
-            console.log(`Filtered by country '${country}': ${filteredCards.length} cards remaining`);
         }
 
-        console.log(`Displaying ${filteredCards.length} cards after filtering`);
         populateCardList(filteredCards);
-
-        // Update other filters based on the current selection
         updateFilterOptions(tier, issuer, country);
 
     } catch (error) {
         console.error('Error in updateSidebarFilters:', error);
-        const list = document.getElementById('sidebar-card-list');
-        if (list) {
-            list.innerHTML = `
-                <div class="text-red-400 p-4">
-                    <p class="font-bold">Error applying filters</p>
-                    <p class="text-sm mt-1">${error.message || 'Please try again'}</p>
-                </div>`;
-        }
     }
 }
 
 function updateFilterOptions(selectedTier, selectedIssuer, selectedCountry) {
-    console.log('Updating filter options with:', { selectedTier, selectedIssuer, selectedCountry });
     try {
-        if (!allCardsCache || allCardsCache.length === 0) {
-            console.warn('No cards in cache to update filter options');
-            return;
-        }
+        if (!allCardsCache || allCardsCache.length === 0) return;
 
         let tempFiltered;
 
@@ -518,7 +544,6 @@ function updateFilterOptions(selectedTier, selectedIssuer, selectedCountry) {
         }
 
         const issuers = [...new Set(tempFiltered.map(c => c.Issuer).filter(Boolean))].sort();
-        console.log('Updating issuer dropdown with options:', issuers);
         populateSelectWithOptions('issuer-filter', issuers, selectedIssuer, 'All Issuers');
 
         // Update Country options
@@ -531,36 +556,23 @@ function updateFilterOptions(selectedTier, selectedIssuer, selectedCountry) {
         }
 
         const countries = [...new Set(tempFiltered.map(c => c.Country).filter(Boolean))].sort();
-        console.log('Updating country dropdown with options:', countries);
         populateSelectWithOptions('country-filter', countries, selectedCountry, 'All Countries');
 
     } catch (error) {
         console.error('Error in updateFilterOptions:', error);
-        // Don't show error to user as it might be non-critical
     }
 }
 
 function populateSelectWithOptions(selectId, options, selectedValue, defaultOptionText) {
     try {
-        console.log(`Populating ${selectId} with ${options.length} options, selected: ${selectedValue}`);
         const select = document.getElementById(selectId);
+        if (!select) return;
 
-        if (!select) {
-            throw new Error(`Select element with ID '${selectId}' not found`);
-        }
+        if (!Array.isArray(options)) options = [];
 
-        if (!Array.isArray(options)) {
-            console.warn(`Options for ${selectId} is not an array:`, options);
-            options = [];
-        }
-
-        // Save the current value to restore it after updating options
         const currentValue = select.value;
-
-        // Clear existing options
         select.innerHTML = '';
 
-        // Add default option
         if (defaultOptionText) {
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
@@ -568,9 +580,8 @@ function populateSelectWithOptions(selectId, options, selectedValue, defaultOpti
             select.appendChild(defaultOption);
         }
 
-        // Add all options
         options.forEach(optionText => {
-            if (optionText) { // Skip null/undefined options
+            if (optionText) {
                 const option = document.createElement('option');
                 option.value = optionText;
                 option.textContent = optionText;
@@ -578,38 +589,23 @@ function populateSelectWithOptions(selectId, options, selectedValue, defaultOpti
             }
         });
 
-        // Try to restore the selected value if it's still valid
         if (selectedValue && options.includes(selectedValue)) {
             select.value = selectedValue;
         } else if (currentValue && options.includes(currentValue)) {
             select.value = currentValue;
         } else if (defaultOptionText) {
-            select.selectedIndex = 0; // Select the default option
+            select.selectedIndex = 0;
         }
-
-        console.log(`Finished populating ${selectId}, selected value: ${select.value}`);
 
     } catch (error) {
         console.error(`Error in populateSelectWithOptions for ${selectId}:`, error);
-        // Try to show error in the select if possible
-        const select = document.getElementById(selectId);
-        if (select) {
-            select.innerHTML = `
-                <option value="" disabled selected>Error loading options</option>
-                <option value="">Refresh page</option>
-            `;
-        }
     }
 }
 
 function populateCardList(cards) {
     try {
-        console.log('Populating card list with', cards.length, 'cards');
         const list = document.getElementById('sidebar-card-list');
-        if (!list) {
-            console.error('sidebar-card-list element not found');
-            return;
-        }
+        if (!list) return;
 
         list.innerHTML = '';
 
@@ -645,23 +641,12 @@ function populateCardList(cards) {
                 console.error('Error creating card element:', error, card);
             }
         });
-
-        console.log('Finished populating card list');
     } catch (error) {
         console.error('Error in populateCardList:', error);
-        const list = document.getElementById('sidebar-card-list');
-        if (list) {
-            list.innerHTML = `
-                <div class="text-center text-red-400 p-4">
-                    <p>Error loading cards. Please try again.</p>
-                    <p class="text-xs mt-2">${error.message}</p>
-                </div>`;
-        }
     }
 }
 
 async function generateCardAnalysis(card) {
-    // Simulate AI analysis - in a real app, this would call an AI API
     const benefits = [
         `The ${card.CardName} offers excellent value for ${card.RewardCategories?.join(' and ')} spending.`,
         `With a ${card.AnnualFee === 0 ? 'no annual fee' : 'reasonable annual fee'}, this card is perfect for ${card.MinIncome > 50000 ? 'premium' : 'everyday'} spenders.`,
@@ -669,7 +654,6 @@ async function generateCardAnalysis(card) {
         `Earn up to ${Math.max(...card.reward_rates.map(r => r.rate)) * 100}% back on select categories.`
     ].filter(Boolean).join(' ');
 
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 800));
 
     return `
@@ -691,7 +675,6 @@ async function generateCardAnalysis(card) {
 let currentCard = null;
 let currentCvv = '';
 
-// Helper function to format currency based on card country
 function formatCurrency(amount, country) {
     if (!amount && amount !== 0) return 'N/A';
 
@@ -711,7 +694,7 @@ function formatCurrency(amount, country) {
 async function showCardDetails(card) {
     try {
         console.log('Showing card details for:', card.CardName);
-        currentCard = card; // Store the current card for AI analysis
+        currentCard = card;
         const modal = document.getElementById('card-modal');
         const modalContent = document.getElementById('modal-content');
 
@@ -719,12 +702,10 @@ async function showCardDetails(card) {
             throw new Error('Modal elements not found');
         }
 
-        // Show the modal
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        document.body.style.overflow = 'hidden'; // Prevent scrolling when modal is open
+        document.body.style.overflow = 'hidden';
 
-        // Generate rewards HTML
         let rewardsHtml = '';
         if (card.reward_rates && Array.isArray(card.reward_rates)) {
             rewardsHtml = card.reward_rates.map(rate => `
@@ -737,14 +718,12 @@ async function showCardDetails(card) {
             rewardsHtml = '<p class="text-gray-400">No reward rates available</p>';
         }
 
-
-        // Create modal content with front and back views
         modalContent.innerHTML = `
-            <div class="bg-gradient-to-br from-indigo-900 to-indigo-950 rounded-2xl p-6 shadow-2xl max-w-2xl w-full mx-4 relative overflow-hidden">
+            <div class="bg-gradient-to-br from-indigo-900 to-indigo-950 rounded-2xl shadow-2xl w-full mx-4 relative overflow-hidden" style="max-width: 90vw; height: 550px;">
             
             <!-- Front of Card -->
-            <div id="card-front" class="transition-all duration-300 cursor-pointer">
-                <div class="flex flex-col h-full">
+            <div id="card-front" class="transition-all duration-300 cursor-pointer p-8 h-full">
+                <div class="flex flex-col h-full justify-between">
                     <div class="flex justify-between items-start mb-4">
                         <div class="flex items-center gap-3">
                             <img src="https://logo.clearbit.com/${(card.Issuer || '').toLowerCase()}.com" 
@@ -775,229 +754,138 @@ async function showCardDetails(card) {
                         </div>
                         <div class="text-white text-lg font-mono mt-1">•••• •••• •••• ${Math.floor(1000 + Math.random() * 9000)}</div>
                         <div class="text-indigo-300 text-xs mt-2 flex justify-between">
-                            <span>Click to view AI analysis</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                            </svg>
+                            <span>VALID THRU: ${Math.floor(1 + Math.random() * 12).toString().padStart(2, '0')}/${(new Date().getFullYear() + Math.floor(2 + Math.random() * 4)).toString().slice(-2)}</span>
+                            <span>CVV: ***</span>
                         </div>
                     </div>
 
-                    <!-- Card Details -->
                     <div class="grid grid-cols-2 gap-4 mt-6">
                         <div>
-                            <h3 class="text-xs font-medium text-indigo-300 mb-1">Min. Income</h3>
-                            <p class="text-white text-sm">${formatCurrency(card.MinIncome, card.Country)}</p>
+                            <h4 class="text-xs font-bold text-indigo-300 uppercase mb-2">Rewards</h4>
+                            <dl class="space-y-1 text-sm text-gray-300">
+                                ${rewardsHtml}
+                            </dl>
                         </div>
                         <div>
-                            <h3 class="text-xs font-medium text-indigo-300 mb-1">Foreign Fee</h3>
-                            <p class="text-white text-sm">${card.ForeignTransactionFee ? (card.ForeignTransactionFee * 100) + '%' : 'None'}</p>
+                            <h4 class="text-xs font-bold text-indigo-300 uppercase mb-2">Perks</h4>
+                            <ul class="text-sm text-gray-300 space-y-1">
+                                ${card.LoungeAccess ? '<li class="flex items-center"><svg class="w-3 h-3 mr-1 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Lounge Access</li>' : ''}
+                                ${card.PerksValue ? `<li class="flex items-center"><svg class="w-3 h-3 mr-1 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> ₹${card.PerksValue} Benefits</li>` : ''}
+                                <li class="flex items-center"><svg class="w-3 h-3 mr-1 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Global Acceptance</li>
+                            </ul>
                         </div>
-                    </div>
-
-                    <!-- Reward Rates -->
-                    <div class="mt-4">
-                        <h3 class="text-xs font-medium text-indigo-300 mb-2">Reward Rates</h3>
-                        <dl class="space-y-1.5">
-                            ${rewardsHtml}
-                        </dl>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Back of Card (initially hidden) -->
-            <div id="card-back" class="hidden transition-all duration-300">
-                <div class="bg-gradient-to-r from-indigo-900 to-indigo-800 p-6 rounded-xl h-full flex flex-col">
-                    <div class="flex justify-between items-center mb-6">
-                        <button id="back-to-front" class="text-indigo-300 hover:text-white transition-colors flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            Back to Card
-                        </button>
-                        <span class="text-sm text-indigo-400">AI Analysis</span>
                     </div>
                     
-                    <!-- AI Analysis Loading Placeholder -->
-                    <div id="ai-analysis-container" class="flex-1 flex items-center justify-center">
-                        <div class="text-center">
-                            <div class="animate-pulse flex space-x-2 justify-center">
-                                <div class="w-2 h-2 bg-indigo-400 rounded-full"></div>
-                                <div class="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                                <div class="w-2 h-2 bg-indigo-600 rounded-full"></div>
+                    <div class="mt-6 text-center text-xs text-indigo-400 animate-pulse">
+                        Click card to flip & reveal CVV
+                    </div>
+                </div>
+            </div>
+
+            <!-- Back of Card -->
+            <div id="card-back" class="hidden absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-950 rounded-2xl shadow-2xl overflow-hidden">
+                <div class="h-full flex flex-col">
+                    <!-- Back Button -->
+                    <div class="p-6 pb-0">
+                        <button id="back-to-front" class="text-white/90 hover:text-white flex items-center gap-2 transition-colors bg-white/10 px-3 py-2 rounded-lg hover:bg-white/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                            <span class="text-sm font-medium">Back to Front</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Black Magnetic Stripe -->
+                    <div class="w-full h-14 bg-black mt-6"></div>
+                    
+                    <!-- Card Content Area -->
+                    <div class="flex-1 px-8 py-6 space-y-6">
+                        <!-- CVV Section -->
+                        <div class="flex justify-end">
+                            <div class="bg-white p-4 rounded-lg shadow-lg">
+                                <div class="text-xs text-gray-700 font-semibold mb-1">SECURITY CODE (CVV)</div>
+                                <div id="cvv-display" class="text-2xl font-mono font-bold text-black tracking-wider">***</div>
                             </div>
-                            <p class="mt-2 text-sm text-indigo-300">Generating AI analysis...</p>
+                        </div>
+                        
+                        <!-- AI Analysis Section -->
+                        <div class="bg-white/10 p-4 rounded-lg border-t-2 border-white/20">
+                            <h4 class="font-bold text-sm mb-3 flex items-center text-white">
+                                <svg class="w-4 h-4 mr-2 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                AI-Powered Card Analysis
+                            </h4>
+                            <div id="ai-analysis-content" class="text-xs text-white/90 leading-relaxed">
+                                <div class="flex space-x-2 items-center">
+                                    <div class="animate-pulse flex space-x-1">
+                                        <div class="w-2 h-2 bg-indigo-400 rounded-full"></div>
+                                        <div class="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                                        <div class="w-2 h-2 bg-indigo-600 rounded-full"></div>
+                                    </div>
+                                    <span class="text-indigo-300">Analyzing card benefits...</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Card Network Logo at Bottom -->
+                        <div class="text-right text-white/50 text-xs pt-2">
+                            <div class="font-bold text-2xl tracking-wider">VISA</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>`;
+            </div>
+        `;
 
-        // Make the entire card clickable for showing AI analysis
-        const cardFront = modalContent.querySelector('#card-front');
-        if (cardFront) {
-            cardFront.addEventListener('click', () => {
-                const cardBack = modalContent.querySelector('#card-back');
-                if (cardBack) {
-                    cardFront.classList.add('hidden');
-                    cardBack.classList.remove('hidden');
-                    // Generate AI analysis when showing the back
-                    generateCardAnalysis(card);
-                }
-            });
+        // Generate CVV
+        currentCvv = Math.floor(100 + Math.random() * 900).toString();
+        document.getElementById('cvv-display').textContent = currentCvv;
+
+        // Flip logic
+        const cardFront = document.getElementById('card-front');
+        const cardBack = document.getElementById('card-back');
+        const backToFrontBtn = document.getElementById('back-to-front');
+
+        function flipCard() {
+            if (cardFront.classList.contains('hidden')) {
+                cardBack.classList.add('hidden');
+                cardFront.classList.remove('hidden');
+            } else {
+                cardFront.classList.add('hidden');
+                cardBack.classList.remove('hidden');
+            }
         }
 
-        // Close modal when clicking outside the modal content
+        cardFront.addEventListener('click', flipCard);
+        backToFrontBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            flipCard();
+        });
 
-        // Show card back button
-        const showBackBtn = modalContent.querySelector('#show-card-back');
-        if (showBackBtn) {
-            showBackBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const cardFront = document.getElementById('card-front');
-                const cardBack = document.getElementById('card-back');
-                if (cardFront && cardBack) {
-                    cardFront.classList.add('hidden');
-                    cardBack.classList.remove('hidden');
-                }
-            });
-        }
+        // Trigger AI Analysis
+        const analysisContent = document.getElementById('ai-analysis-content');
+        generateCardAnalysis(card).then(html => {
+            if (analysisContent) analysisContent.innerHTML = html;
+        });
 
-        // Back to front button
-        const backToFrontBtn = modalContent.querySelector('#back-to-front');
-        if (backToFrontBtn) {
-            backToFrontBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const cardFront = document.getElementById('card-front');
-                const cardBack = document.getElementById('card-back');
-                if (cardFront && cardBack) {
-                    cardFront.classList.remove('hidden');
-                    cardBack.classList.add('hidden');
-                }
-            });
-        }
+        // Close modal logic
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        closeModalBtn.onclick = () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+        };
 
-        // Generate AI analysis in the background
-        generateCardAnalysis(card)
-            .then(analysis => {
-                const aiContainer = document.getElementById('ai-analysis-container');
-                if (aiContainer) {
-                    aiContainer.innerHTML = analysis;
-                }
-            })
-            .catch(error => {
-                console.error('Error generating AI analysis:', error);
-                const aiContainer = document.getElementById('ai-analysis-container');
-                if (aiContainer) {
-                    aiContainer.innerHTML = `
-                        <div class="text-center text-red-400">
-                            <p>Failed to load AI analysis. Please try again.</p>
-                        </div>`;
-                }
-            });
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = '';
+            }
+        };
 
     } catch (error) {
         console.error('Error showing card details:', error);
-        // Show error to user
-        const modalContent = document.getElementById('modal-content');
-        if (modalContent) {
-            modalContent.innerHTML = `
-                <div class="bg-gradient-to-br from-red-900 to-red-950 rounded-2xl p-6 shadow-2xl max-w-2xl w-full mx-4 relative overflow-hidden">
-                    <h2 class="text-xl font-bold text-white mb-4">Error Loading Card Details</h2>
-                    <p class="text-red-200">${error.message || 'An error occurred while loading card details.'}</p>
-                    <button id="close-modal-btn" class="mt-4 px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-md transition-colors">
-                        Close
-                    </button>
-                </div>`;
-
-            // Add close button event listener
-            const closeBtn = modalContent.querySelector('#close-modal-btn');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', closeModal);
-            }
-        }
     }
 }
-
-// Initialize event listeners
-document.addEventListener('DOMContentLoaded', () => {
-    const browseBtn = document.getElementById('browse-cards-btn');
-    const closeSidebarBtn = document.getElementById('close-sidebar-btn');
-    const sidebar = document.getElementById('sidebar');
-    const modal = document.getElementById('card-modal');
-
-    // Sidebar toggle
-    if (browseBtn) {
-        browseBtn.addEventListener('click', () => {
-            console.log('Browse button clicked');
-            if (sidebar) {
-                console.log('Sidebar found, removing translate-x-full class');
-                sidebar.classList.remove('translate-x-full');
-                // Force reflow to ensure the transition works
-                void sidebar.offsetWidth;
-                // Initialize or refresh the card list when opening the sidebar
-                if (allCardsCache.length === 0) {
-                    console.log('No cards in cache, initializing sidebar');
-                    initializeSidebar();
-                } else {
-                    console.log('Refreshing card list with', allCardsCache.length, 'cached cards');
-                    updateSidebarFilters();
-                }
-            } else {
-                console.error('Sidebar element not found');
-            }
-        });
-    }
-
-    // Close sidebar
-    if (closeSidebarBtn && sidebar) {
-        closeSidebarBtn.addEventListener('click', () => {
-            sidebar.classList.add('translate-x-full');
-        });
-    }
-
-    // Close modal function - defined in global scope
-    window.closeModal = function () {
-        console.log('Closing modal...');
-        const modal = document.getElementById('card-modal');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            document.body.style.overflow = 'auto'; // Re-enable scrolling
-            // Reset to front view when closing
-            const cardFront = document.getElementById('card-front');
-            const cardBack = document.getElementById('card-back');
-            if (cardFront && cardBack) {
-                cardFront.classList.remove('hidden');
-                cardBack.classList.add('hidden');
-            }
-        }
-    };
-
-    // Click handler for modal interactions
-    document.addEventListener('click', (e) => {
-        const modal = document.getElementById('card-modal');
-        const modalContent = modal ? modal.querySelector('.bg-gradient-to-br') : null;
-
-        // Close modal when clicking outside the modal content
-        if (modal && modalContent && e.target === modal) {
-            closeModal();
-        }
-    });
-
-    // Close with Escape key
-    document.addEventListener('keydown', (e) => {
-        const modal = document.getElementById('card-modal');
-        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
-            closeModal();
-        }
-    });
-
-    // Initialize filters
-    const tierFilter = document.getElementById('tier-filter');
-    const issuerFilter = document.getElementById('issuer-filter');
-    const countryFilter = document.getElementById('country-filter');
-
-    if (tierFilter) tierFilter.addEventListener('change', updateSidebarFilters);
-    if (issuerFilter) issuerFilter.addEventListener('change', updateSidebarFilters);
-    if (countryFilter) countryFilter.addEventListener('change', updateSidebarFilters);
-});
